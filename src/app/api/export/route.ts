@@ -1,83 +1,79 @@
-import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-import { promises as fs } from 'fs'
-import path from 'path'
-import { SearchFilters } from '@/lib/types'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-interface CompanyRecord {
-  register_name: string
-  abn: string
-  acn: string
-  status: string
-  state: string
-  registration_date: string
-}
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const filters: SearchFilters = {
-      query: searchParams.get('q') || '',
-      industry: searchParams.get('industry') || 'all',
-      state: searchParams.get('state') || 'all',
-      status: searchParams.get('status') || 'all'
-    }
+    const searchParams = request.nextUrl.searchParams
+    const query = searchParams.get('query') || ''
+    const industry = searchParams.get('industry') || 'all'
+    const state = searchParams.get('state') || 'all'
+    const status = searchParams.get('status') || 'all'
 
-    // Create a temporary file path
-    const tempFilePath = path.join(process.cwd(), 'temp', 'companies.csv')
-    
-    // Ensure the temp directory exists
-    await fs.mkdir(path.dirname(tempFilePath), { recursive: true })
-
-    // Build query
-    let queryBuilder = supabase
-      .from('companies')
-      .select('*')
-      .order('register_name')
+    let dbQuery = supabase.from('companies').select('*')
 
     // Apply filters
-    if (filters.query) {
-      queryBuilder = queryBuilder.ilike('register_name', `%${filters.query}%`)
+    if (query) {
+      dbQuery = dbQuery.ilike('register_name', `%${query}%`)
     }
     
-    if (filters.industry && filters.industry !== 'all') {
-      queryBuilder = queryBuilder.ilike('business_name', `%${filters.industry}%`)
+    if (industry !== 'all') {
+      dbQuery = dbQuery.eq('business_name', industry)
     }
     
-    if (filters.state && filters.state !== 'all') {
-      queryBuilder = queryBuilder.eq('state', filters.state)
+    if (state !== 'all') {
+      dbQuery = dbQuery.eq('state', state)
     }
     
-    if (filters.status && filters.status !== 'all') {
-      queryBuilder = queryBuilder.eq('status', filters.status)
+    if (status !== 'all') {
+      dbQuery = dbQuery.eq('status', status)
     }
 
-    // Get all results (no pagination for export)
-    const { data: companies, error } = await queryBuilder
+    // Order by register_name
+    dbQuery = dbQuery.order('register_name')
+
+    const { data: companies, error } = await dbQuery
 
     if (error) {
-      throw new Error('Failed to fetch companies')
+      console.error('Error fetching companies for export:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch companies' },
+        { status: 500 }
+      )
     }
 
-    // Generate CSV content
-    const headers = ['Company Name', 'ABN', 'ACN', 'Status', 'State', 'Registration Date']
-    const csvRows = [
-      headers.join(','),
-      ...companies.map((company: CompanyRecord) => [
-        `"${(company.register_name || '').replace(/"/g, '""')}"`,
-        company.abn || '',
-        company.acn || '',
-        company.status || '',
-        company.state || '',
-        company.registration_date || ''
-      ].join(','))
+    // Generate CSV
+    const headers = [
+      'Register Name',
+      'Business Name',
+      'Status',
+      'Registration Date',
+      'State',
+      'ABN'
     ]
 
-    const csvContent = csvRows.join('\n')
+    // CSV header row
+    let csv = headers.join(',') + '\n'
 
-    // Return the CSV file
-    return new NextResponse(csvContent, {
+    // CSV data rows
+    companies.forEach((company) => {
+      const row = [
+        escapeCsvValue(company.register_name || ''),
+        escapeCsvValue(company.business_name || ''),
+        escapeCsvValue(company.status || ''),
+        escapeCsvValue(company.registration_date || ''),
+        escapeCsvValue(company.state || ''),
+        escapeCsvValue(company.abn || '')
+      ]
+      csv += row.join(',') + '\n'
+    })
+
+    // Return CSV with proper headers
+    return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv',
         'Content-Disposition': 'attachment; filename="companies.csv"'
@@ -86,8 +82,18 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Export error:', error)
     return NextResponse.json(
-      { error: 'Failed to export companies' },
+      { error: 'Export failed' },
       { status: 500 }
     )
   }
+}
+
+// Helper function to escape CSV values
+function escapeCsvValue(value: string) {
+  // If the value contains commas, quotes, or newlines, wrap it in quotes
+  if (value && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+    // Double any quotes in the value
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
 } 

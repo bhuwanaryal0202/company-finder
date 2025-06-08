@@ -29,7 +29,10 @@ export default function Home() {
   const handleExport = async () => {
     try {
       const params = new URLSearchParams({
-        ...currentFilters,
+        query: currentFilters.query,
+        industry: currentFilters.industry,
+        state: currentFilters.state,
+        status: currentFilters.status,
         page: currentPage.toString()
       })
       const response = await fetch(`/api/export?${params}`)
