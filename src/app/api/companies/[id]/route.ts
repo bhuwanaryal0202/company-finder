@@ -14,7 +14,7 @@ export async function GET(
     const { data: company, error } = await supabase
       .from('companies')
       .select('*')
-      .eq('abn', params.id)
+      .eq('id', params.id)
       .single()
 
     if (error) {
