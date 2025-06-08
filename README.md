@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CompanyFinder - B2B Company Search Platform
 
-## Getting Started
+CompanyFinder is a streamlined B2B company search platform that transforms Australian government company data into an intuitive search interface. Users can discover companies through multiple search criteria, view detailed company profiles, and export results for business development purposes.
 
-First, run the development server:
+## Core Features
 
+1. **Smart Search Interface** - Search by company name with real-time results
+2. **Advanced Filtering** - Filter by industry, state, and company status
+3. **Company Profiles** - Detailed view of company information
+4. **Data Export** - Export search results to CSV format
+5. **Responsive Design** - Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **UI Components**: Lucide React icons
+
+## Setup Instructions
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/company-finder.git
+cd company-finder
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create a `.env.local` file in the root directory with your Supabase credentials:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-To learn more about Next.js, take a look at the following resources:
+## Database Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create a table called `companies` in your Supabase project with the following SQL:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+CREATE TABLE companies (
+  id BIGSERIAL PRIMARY KEY,
+  abn VARCHAR(11) UNIQUE,
+  company_name TEXT NOT NULL,
+  business_type TEXT,
+  industry TEXT,
+  state TEXT,
+  postcode TEXT,
+  suburb TEXT,
+  registration_status TEXT,
+  registration_date DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
 
-## Deploy on Vercel
+-- Add indexes for performance
+CREATE INDEX idx_companies_name ON companies USING GIN (to_tsvector('english', company_name));
+CREATE INDEX idx_companies_industry ON companies (industry);
+CREATE INDEX idx_companies_state ON companies (state);
+CREATE INDEX idx_companies_status ON companies (registration_status);
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── companies/
+│   │   │   ├── route.ts          # Search companies API
+│   │   │   └── [id]/route.ts     # Get single company API
+│   │   └── export/route.ts       # Export CSV API
+│   ├── company/
+│   │   └── [id]/page.tsx         # Company detail page
+│   ├── components/
+│   │   ├── SearchBar.tsx         # Search input component
+│   │   ├── CompanyCard.tsx       # Company display card
+│   │   ├── FilterPanel.tsx       # Search filters
+│   │   └── ExportButton.tsx      # CSV export button
+│   ├── lib/
+│   │   ├── supabase.ts          # Database client
+│   │   └── types.ts             # TypeScript types
+│   ├── layout.tsx               # Root layout
+│   └── page.tsx                 # Home page
+```
+
+## License
+
+MIT
