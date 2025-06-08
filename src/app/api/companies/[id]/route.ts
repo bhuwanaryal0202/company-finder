@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function GET(
   request: NextRequest,
@@ -9,14 +14,15 @@ export async function GET(
     const { data: company, error } = await supabase
       .from('companies')
       .select('*')
-      .eq('id', params.id)
+      .eq('abn', params.id)
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Company not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (!company) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
     return NextResponse.json(company)
