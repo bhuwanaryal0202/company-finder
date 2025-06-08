@@ -1,42 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { searchCompanies } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const query = searchParams.get('query') || ''
-    const industry = searchParams.get('industry') || 'all'
-    const state = searchParams.get('state') || 'all'
-    const status = searchParams.get('status') || 'all'
-
-    let dbQuery = supabase.from('companies').select('*')
-
-    // Apply filters
-    if (query) {
-      dbQuery = dbQuery.ilike('register_name', `%${query}%`)
+    
+    // Extract search parameters
+    const params = {
+      query: searchParams.get('query') || '',
+      industry: searchParams.get('industry') || 'all',
+      state: searchParams.get('state') || 'all',
+      status: searchParams.get('status') || 'all',
+      // Set a high limit to get all results
+      limit: 1000,
+      offset: 0
     }
     
-    if (industry !== 'all') {
-      dbQuery = dbQuery.eq('business_name', industry)
-    }
-    
-    if (state !== 'all') {
-      dbQuery = dbQuery.eq('state', state)
-    }
-    
-    if (status !== 'all') {
-      dbQuery = dbQuery.eq('status', status)
-    }
-
-    // Order by register_name
-    dbQuery = dbQuery.order('register_name')
-
-    const { data: companies, error } = await dbQuery
+    // Use the same search function that powers the main search
+    const { data: companies, error } = await searchCompanies(params)
 
     if (error) {
       console.error('Error fetching companies for export:', error)
@@ -44,6 +25,24 @@ export async function GET(request: NextRequest) {
         { error: 'Failed to fetch companies' },
         { status: 500 }
       )
+    }
+
+    if (!companies || companies.length === 0) {
+      // Generate empty CSV with headers
+      const headers = [
+        'Register Name',
+        'Business Name',
+        'Status',
+        'Registration Date',
+        'State',
+        'ABN'
+      ]
+      return new NextResponse(headers.join(',') + '\n', {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename="companies.csv"'
+        }
+      })
     }
 
     // Generate CSV
