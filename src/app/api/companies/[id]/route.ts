@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -6,21 +6,15 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-type RouteContext = {
-  params: {
-    id: string
-  }
-}
-
 export async function GET(
-  request: NextRequest,
-  context: RouteContext
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
     const { data: company, error } = await supabase
       .from('companies')
       .select('*')
-      .eq('id', context.params.id)
+      .eq('id', params.id)
       .single()
 
     if (error) {
