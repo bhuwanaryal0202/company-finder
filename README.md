@@ -85,7 +85,6 @@ src/
 │   ├── components/
 │   │   ├── SearchBar.tsx         # Search input component
 │   │   ├── CompanyCard.tsx       # Company display card
-│   │   ├── FilterPanel.tsx       # Search filters
 │   │   └── ExportButton.tsx      # CSV export button
 │   ├── lib/
 │   │   ├── supabase.ts          # Database client
