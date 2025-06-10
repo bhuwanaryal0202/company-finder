@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Company } from '@/lib/types'
-import { Building2, MapPin, Calendar } from 'lucide-react'
+import {  MapPin, Calendar } from 'lucide-react'
 
 interface CompanyCardProps {
   company: Company
@@ -21,7 +21,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
       <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" suppressHydrationWarning>
         <div className="flex justify-between items-start mb-3" suppressHydrationWarning>
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-            {company.register_name}
+            {company.business_name}
           </h3>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(company.status)}`}>
             {company.status}
@@ -29,12 +29,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
         </div>
 
         <div className="space-y-2 text-sm text-gray-600" suppressHydrationWarning>
-          {company.business_name && (
-            <div className="flex items-center" suppressHydrationWarning>
-              <Building2 className="w-4 h-4 mr-2" />
-              <span>{company.business_name}</span>
-            </div>
-          )}
+         
 
           {company.state && (
             <div className="flex items-center" suppressHydrationWarning>
