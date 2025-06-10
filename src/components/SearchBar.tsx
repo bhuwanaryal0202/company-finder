@@ -30,25 +30,39 @@ const statuses = [
   'Deregistered'
 ] as const
 
+// Default filters
+const defaultFilters: SearchFilters = {
+  query: '',
+  industry: 'all',
+  state: 'all',
+  status: 'all'
+}
+
 interface SearchBarProps {
   onResults: (companies: Company[], total: number, filters: SearchFilters) => void
   onLoading: (loading: boolean) => void
+  initialFilters?: SearchFilters
 }
 
-export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+export default function SearchBar({ onResults, onLoading, initialFilters }: SearchBarProps) {
+  // Use initialFilters or default values
+  const safeInitialFilters = initialFilters || defaultFilters
+  
+  const [searchQuery, setSearchQuery] = useState(safeInitialFilters.query || '')
   const [filters, setFilters] = useState<SearchFilters>({
-    query: '',
-    industry: 'all',
-    state: 'all',
-    status: 'all'
+    query: safeInitialFilters.query || '',
+    industry: safeInitialFilters.industry || 'all',
+    state: safeInitialFilters.state || 'all',
+    status: safeInitialFilters.status || 'all'
   })
+  
   const [showFilters, setShowFilters] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const searchCache = useRef<Map<string, { data: SearchResponse; timestamp: number }>>(new Map())
   const ongoingRequests = useRef<Map<string, Promise<SearchResponse>>>(new Map())
   const lastRequestRef = useRef<string>('')
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+  const initialSearchPerformed = useRef(false)
 
   // Debounced search function with increased delay
   const debouncedSearch = useCallback(
@@ -141,12 +155,18 @@ export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
-    debouncedSearch(value, filters)
+    const newFilters = { ...filters, query: value }
+    setFilters(newFilters)
+    debouncedSearch(value, newFilters)
   }
 
   // Initial search on mount
   useEffect(() => {
-    debouncedSearch('', filters)
+    if (!initialSearchPerformed.current) {
+      initialSearchPerformed.current = true
+      debouncedSearch(searchQuery, filters)
+    }
+    
     return () => {
       debouncedSearch.cancel()
     }
@@ -175,10 +195,10 @@ export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
   }, [])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" suppressHydrationWarning>
       {/* Search Input */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <div className="relative" suppressHydrationWarning>
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" suppressHydrationWarning>
           <Search className="h-5 w-5 text-gray-600" />
         </div>
         <input
@@ -198,10 +218,10 @@ export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 space-y-4" suppressHydrationWarning>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" suppressHydrationWarning>
             {/* Industry Filter */}
-            <div>
+            <div suppressHydrationWarning>
               <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
                 Industry
               </label>
@@ -221,7 +241,7 @@ export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
             </div>
 
             {/* State Filter */}
-            <div>
+            <div suppressHydrationWarning>
               <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
                 State
               </label>
@@ -241,7 +261,7 @@ export default function SearchBar({ onResults, onLoading }: SearchBarProps) {
             </div>
 
             {/* Status Filter */}
-            <div>
+            <div suppressHydrationWarning>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                 Status
               </label>

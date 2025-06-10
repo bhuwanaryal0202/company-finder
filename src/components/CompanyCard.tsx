@@ -18,8 +18,8 @@ export default function CompanyCard({ company }: CompanyCardProps) {
 
   return (
     <Link href={`/company/${company.id}`}>
-      <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer border border-gray-200">
-        <div className="flex justify-between items-start mb-3">
+      <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" suppressHydrationWarning>
+        <div className="flex justify-between items-start mb-3" suppressHydrationWarning>
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
             {company.register_name}
           </h3>
@@ -28,23 +28,23 @@ export default function CompanyCard({ company }: CompanyCardProps) {
           </span>
         </div>
 
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-600" suppressHydrationWarning>
           {company.business_name && (
-            <div className="flex items-center">
+            <div className="flex items-center" suppressHydrationWarning>
               <Building2 className="w-4 h-4 mr-2" />
               <span>{company.business_name}</span>
             </div>
           )}
 
           {company.state && (
-            <div className="flex items-center">
+            <div className="flex items-center" suppressHydrationWarning>
               <MapPin className="w-4 h-4 mr-2" />
               <span>{company.state}</span>
             </div>
           )}
 
           {company.registration_date && (
-            <div className="flex items-center">
+            <div className="flex items-center" suppressHydrationWarning>
               <Calendar className="w-4 h-4 mr-2" />
               <span>Registered: {new Date(company.registration_date).toLocaleDateString()}</span>
             </div>
@@ -52,7 +52,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
         </div>
 
         {company.abn && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="mt-3 pt-3 border-t border-gray-200" suppressHydrationWarning>
             <span className="text-xs text-gray-500">ABN: {company.abn}</span>
           </div>
         )}

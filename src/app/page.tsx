@@ -1,30 +1,93 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SearchBar from '@/components/SearchBar'
 import CompanyCard from '@/components/CompanyCard'
 import { Company, SearchFilters } from '@/lib/types'
 import { Download, Building2 } from 'lucide-react'
+import { useCompanies } from '@/lib/queries'
 
 const ITEMS_PER_PAGE = 12
 
+// Default filters
+const defaultFilters: SearchFilters = {
+  query: '',
+  industry: 'all',
+  state: 'all',
+  status: 'all'
+}
+
+// Helper function to safely get localStorage items on the client side only
+const getLocalStorageItem = <T,>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') {
+    return defaultValue;
+  }
+  
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return defaultValue;
+    return JSON.parse(item);
+  } catch (error) {
+    console.error(`Error parsing ${key} from localStorage:`, error);
+    return defaultValue;
+  }
+};
+
 export default function Home() {
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
-    query: '',
-    industry: 'all',
-    state: 'all',
-    status: 'all'
-  })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [total, setTotal] = useState(0)
+  // Client-side only state initialization
+  const [initialized, setInitialized] = useState(false);
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters>(defaultFilters);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize state from localStorage only on the client side
+  useEffect(() => {
+    const filters = getLocalStorageItem('companyFinderFilters', defaultFilters);
+    const page = getLocalStorageItem('companyFinderPage', 1);
+    
+    setCurrentFilters(filters);
+    setCurrentPage(typeof page === 'number' ? page : 1);
+    setInitialized(true);
+  }, []);
+
+  // Use React Query to fetch companies, but only after client-side initialization
+  const { data, isLoading: queryLoading, error } = useCompanies({
+    ...currentFilters,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE
+  });
+
+  // Save filters and page to localStorage when they change, but only after initialization
+  useEffect(() => {
+    if (!initialized) return;
+    
+    try {
+      localStorage.setItem('companyFinderFilters', JSON.stringify(currentFilters));
+    } catch (error) {
+      console.error('Error saving filters to localStorage:', error);
+    }
+  }, [currentFilters, initialized]);
+
+  useEffect(() => {
+    if (!initialized) return;
+    
+    try {
+      localStorage.setItem('companyFinderPage', currentPage.toString());
+    } catch (error) {
+      console.error('Error saving page to localStorage:', error);
+    }
+  }, [currentPage, initialized]);
+
+  // Update loading state for the UI
+  useEffect(() => {
+    setIsLoading(queryLoading);
+  }, [queryLoading]);
 
   const handleSearchResults = (results: Company[], total: number, filters: SearchFilters) => {
-    setCompanies(results)
-    setTotal(total)
-    setCurrentFilters(filters)
-  }
+    setCurrentFilters(filters);
+    // Reset to page 1 when search filters change
+    setCurrentPage(1);
+  };
 
   const handleExport = async () => {
     try {
@@ -34,35 +97,40 @@ export default function Home() {
         state: currentFilters.state,
         status: currentFilters.status,
         page: currentPage.toString()
-      })
-      const response = await fetch(`/api/export?${params}`)
-      if (!response.ok) throw new Error('Export failed')
+      });
+      const response = await fetch(`/api/export?${params}`);
+      if (!response.ok) throw new Error('Export failed');
       
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'companies.csv'
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'companies.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error('Export failed:', error)
+      console.error('Export failed:', error);
     }
-  }
+  };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+    // Scroll to top when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const companies = data?.companies || [];
+  const total = data?.total || 0;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" suppressHydrationWarning>
+          <div className="flex items-center justify-between" suppressHydrationWarning>
+            <div className="flex items-center space-x-2" suppressHydrationWarning>
               <Building2 className="w-8 h-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Company Finder</h1>
             </div>
@@ -78,21 +146,29 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" suppressHydrationWarning>
+        <div className="space-y-8" suppressHydrationWarning>
           {/* Search Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <SearchBar onResults={handleSearchResults} onLoading={setIsLoading} />
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" suppressHydrationWarning>
+            <SearchBar 
+              onResults={handleSearchResults} 
+              onLoading={setIsLoading} 
+              initialFilters={currentFilters}
+            />
           </div>
 
           {/* Results Section */}
-          <div className="space-y-6">
+          <div className="space-y-6" suppressHydrationWarning>
             {isLoading ? (
               <div className="flex justify-center items-center py-16">
                 <div className="relative">
                   <div className="w-12 h-12 border-4 border-blue-200 rounded-full"></div>
                   <div className="w-12 h-12 border-4 border-blue-600 rounded-full animate-spin absolute top-0 left-0 border-t-transparent"></div>
                 </div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-500">Error loading companies. Please try again.</p>
               </div>
             ) : companies.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -104,7 +180,7 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="text-center py-12" suppressHydrationWarning>
                 <p className="text-gray-500">No companies found</p>
               </div>
             )}
@@ -137,5 +213,5 @@ export default function Home() {
         </div>
       </div>
     </main>
-  )
+  );
 }

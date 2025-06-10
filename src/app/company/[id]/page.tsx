@@ -1,46 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Company } from '@/lib/types'
 import { Building2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useCompanyDetails } from '@/lib/queries'
 
 export default function CompanyDetailPage() {
   const params = useParams()
-  const [company, setCompany] = useState<Company | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchCompany = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const companyId = params.id as string
-        const response = await fetch(`/api/companies/${companyId}`)
-        
-        if (!response.ok) {
-          throw new Error('Company not found')
-        }
-
-        const data = await response.json()
-        setCompany(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load company details')
-        setCompany(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (params.id) {
-      fetchCompany()
-    }
-  }, [params.id])
+  const companyId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : undefined
+  
+  const { data: company, isLoading, error } = useCompanyDetails(companyId)
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'registered':
         return 'bg-green-100 text-green-800'
       case 'deregistered':
@@ -50,7 +22,7 @@ export default function CompanyDetailPage() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="relative">
@@ -62,6 +34,10 @@ export default function CompanyDetailPage() {
   }
 
   if (error || !company) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : error ? String(error) : 'Company not found'
+      
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -69,7 +45,7 @@ export default function CompanyDetailPage() {
             <Building2 className="w-8 h-8 text-red-600" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Company</h3>
-          <p className="text-gray-500 mb-6">{error || 'Company not found'}</p>
+          <p className="text-gray-500 mb-6">{errorMessage}</p>
           <Link 
             href="/"
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -86,7 +62,7 @@ export default function CompanyDetailPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" suppressHydrationWarning>
           <Link 
             href="/"
             className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -99,14 +75,14 @@ export default function CompanyDetailPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8" suppressHydrationWarning>
           {/* Company Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-            <div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8" suppressHydrationWarning>
+            <div suppressHydrationWarning>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 {company.register_name}
               </h1>
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 text-sm text-gray-500" suppressHydrationWarning>
                 <span className="flex items-center">
                   <MapPin className="w-4 h-4 mr-1" />
                   {company.state}
@@ -117,7 +93,7 @@ export default function CompanyDetailPage() {
                 </span>
               </div>
             </div>
-            <div className="mt-4 sm:mt-0">
+            <div className="mt-4 sm:mt-0" suppressHydrationWarning>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(company.status)}`}>
                 {company.status}
               </span>
@@ -125,32 +101,32 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* Company Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" suppressHydrationWarning>
+            <div suppressHydrationWarning>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h2>
-              <dl className="space-y-4">
-                <div>
+              <dl className="space-y-4" suppressHydrationWarning>
+                <div suppressHydrationWarning>
                   <dt className="text-sm font-medium text-gray-500">Industry</dt>
                   <dd className="mt-1 text-sm text-gray-900">{company.industry}</dd>
                 </div>
-                <div>
+                <div suppressHydrationWarning>
                   <dt className="text-sm font-medium text-gray-500">Registration Number</dt>
                   <dd className="mt-1 text-sm text-gray-900">{company.registration_number}</dd>
                 </div>
-                <div>
+                <div suppressHydrationWarning>
                   <dt className="text-sm font-medium text-gray-500">ABN</dt>
                   <dd className="mt-1 text-sm text-gray-900">{company.abn}</dd>
                 </div>
-                <div>
+                <div suppressHydrationWarning>
                   <dt className="text-sm font-medium text-gray-500">ACN</dt>
                   <dd className="mt-1 text-sm text-gray-900">{company.acn}</dd>
                 </div>
-                <div>
+                <div suppressHydrationWarning>
                   <dt className="text-sm font-medium text-gray-500">Business Name</dt>
                   <dd className="mt-1 text-sm text-gray-900">{company.business_name}</dd>
                 </div>
                 {company.cancellation_date && (
-                  <div>
+                  <div suppressHydrationWarning>
                     <dt className="text-sm font-medium text-gray-500">Cancellation Date</dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {new Date(company.cancellation_date).toLocaleDateString()}

@@ -11,10 +11,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Ensure params.id is available by awaiting it if needed
+    const id = params.id
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Company ID is required' }, { status: 400 })
+    }
+
     const { data: company, error } = await supabase
       .from('companies')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
