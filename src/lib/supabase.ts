@@ -20,11 +20,11 @@ export const searchCompanies = async (params: {
     .order('register_name')
 
   if (params.query) {
-    queryBuilder = queryBuilder.ilike('register_name', `%${params.query}%`)
+    queryBuilder = queryBuilder.or(`register_name.ilike.%${params.query}%,business_name.ilike.%${params.query}%`)
   }
   
   if (params.industry && params.industry !== 'all') {
-    queryBuilder = queryBuilder.ilike('business_name', `%${params.industry}%`)
+    queryBuilder = queryBuilder.ilike('industry', `%${params.industry}%`)
   }
   
   if (params.state && params.state !== 'all') {
