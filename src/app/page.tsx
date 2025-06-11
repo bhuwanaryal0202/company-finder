@@ -5,35 +5,24 @@ import SearchBar from '@/components/SearchBar'
 import CompanyCard from '@/components/CompanyCard'
 import { Company, SearchFilters } from '@/lib/types'
 import { Download, Building2 } from 'lucide-react'
-import { useCompanies } from '@/lib/queries'
+import { useCompanies, useSearchState } from '@/lib/queries'
 import Skeleton from '@/components/SkeletonLoading'
-import { useSearchState, useNavigationFix, setNavigatingBack } from '@/lib/hooks'
 
 const ITEMS_PER_PAGE = 12
 
-// Default filters
-const defaultFilters: SearchFilters = {
-  query: '',
-  industry: 'all',
-  state: 'all',
-  status: 'all'
-}
-
 export default function Home() {
-  // Apply navigation fix
-  useNavigationFix();
+  // Use React Query for state management
+  const searchStateManager = useSearchState();
+  const { filters: initialFilters, page: initialPage } = searchStateManager.getSearchState();
   
-  // Use our enhanced search state hook for better persistence
-  const [currentFilters, setCurrentFilters] = useSearchState<SearchFilters>('companyFinderFilters', defaultFilters);
-  const [currentPage, setCurrentPage] = useSearchState<number>('companyFinderPage', 1);
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters>(initialFilters);
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
   const [isLoading, setIsLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   
   // Mark as initialized after initial render
   useEffect(() => {
     setInitialized(true);
-    // Clear navigation flag as we're now on the home page
-    setNavigatingBack(false);
   }, []);
 
   // Use React Query to fetch companies
@@ -47,6 +36,13 @@ export default function Home() {
   useEffect(() => {
     setIsLoading(queryLoading);
   }, [queryLoading]);
+  
+  // Save search state to React Query whenever filters or page changes
+  useEffect(() => {
+    if (initialized) {
+      searchStateManager.setSearchState(currentFilters, currentPage);
+    }
+  }, [currentFilters, currentPage, initialized, searchStateManager]);
 
   const handleSearchResults = (results: Company[], total: number, filters: SearchFilters) => {
     setCurrentFilters(filters);

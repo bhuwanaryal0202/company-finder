@@ -5,7 +5,6 @@ import { Building2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useCompanyDetails } from '@/lib/queries'
 import { useState, useEffect } from 'react'
-import { setNavigatingBack } from '@/lib/hooks'
 
 export default function CompanyDetailPage() {
   const params = useParams()
@@ -19,14 +18,9 @@ export default function CompanyDetailPage() {
   
   const { data: company, isLoading, error } = useCompanyDetails(companyId)
 
-  // Handle back navigation to preserve search state
+  // Handle back navigation - with React Query's persistence, we can simply use router.back()
   const handleBackNavigation = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    // Set the flag to indicate we're navigating back
-    setNavigatingBack(true);
-    
-    // Try the browser's back button first
     router.back();
     
     // Fallback: if we don't navigate away within 100ms, go to home page
@@ -34,7 +28,7 @@ export default function CompanyDetailPage() {
       // Check if we're still on the same page
       if (window.location.pathname.includes(`/company/${companyId}`)) {
         // Still on the same page, force navigation to home
-        window.location.href = '/';
+        router.push('/');
       }
     }, 100);
   };

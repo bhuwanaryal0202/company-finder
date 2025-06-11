@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { SearchFilters, Company, SearchResponse } from './types'
 
 export const COMPANIES_QUERY_KEY = 'companies'
 export const COMPANY_DETAIL_QUERY_KEY = 'company-detail'
+export const SEARCH_STATE_KEY = 'search-state'
 
 interface CompaniesQueryParams extends SearchFilters {
   page: number
@@ -95,7 +96,10 @@ export function useCompanies(params: CompaniesQueryParams) {
   return useQuery({
     queryKey: [COMPANIES_QUERY_KEY, params],
     queryFn: () => fetchCompanies(params),
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previousData) => {
+      // Use the most recent data for smoother UX
+      return previousData;
+    },
     retry: (failureCount, error) => {
       // Don't retry client errors (4xx)
       if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
@@ -105,7 +109,7 @@ export function useCompanies(params: CompaniesQueryParams) {
       return failureCount < 3;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes (for caching)
+    gcTime: 1000 * 60 * 60, // 1 hour
   })
 }
 
@@ -136,6 +140,34 @@ export function useCompanyDetails(id: string | undefined) {
       return failureCount < 3;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes (for caching)
+    gcTime: 1000 * 60 * 60, // 1 hour
   })
+}
+
+// New hook to manage search state that persists across page navigations
+export function useSearchState() {
+  const queryClient = useQueryClient();
+  
+  // Get the current search state
+  const getSearchState = (): { filters: SearchFilters; page: number } => {
+    return queryClient.getQueryData([SEARCH_STATE_KEY]) || { 
+      filters: {
+        query: '',
+        industry: 'all',
+        state: 'all',
+        status: 'all'
+      }, 
+      page: 1 
+    };
+  };
+  
+  // Update the search state
+  const setSearchState = (filters: SearchFilters, page: number) => {
+    queryClient.setQueryData([SEARCH_STATE_KEY], { filters, page });
+  };
+  
+  return {
+    getSearchState,
+    setSearchState
+  };
 } 
