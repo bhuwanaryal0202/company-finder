@@ -133,6 +133,83 @@ export function useRecentSearches(maxItems: number = 5) {
 }
 
 /**
+ * Flag to indicate if we're handling back navigation
+ */
+const NAVIGATION_KEY = 'companyFinder_navigatingBack';
+
+/**
+ * Function to set navigation flag
+ */
+export function setNavigatingBack(value: boolean) {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    if (value) {
+      sessionStorage.setItem(NAVIGATION_KEY, 'true');
+    } else {
+      sessionStorage.removeItem(NAVIGATION_KEY);
+    }
+  } catch (error) {
+    console.error('Error setting navigation flag:', error);
+  }
+}
+
+/**
+ * Function to check if we're currently handling back navigation
+ */
+export function isNavigatingBack(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    return sessionStorage.getItem(NAVIGATION_KEY) === 'true';
+  } catch (error) {
+    console.error('Error checking navigation flag:', error);
+    return false;
+  }
+}
+
+/**
+ * Hook for forcing a reload if navigation state is broken
+ */
+export function useNavigationFix() {
+  useEffect(() => {
+    // Force reload if this is not a back navigation
+    const handleRestore = () => {
+      const storedFilters = localStorage.getItem('companyFinderFilters');
+      const storedPage = localStorage.getItem('companyFinderPage');
+      
+      // Only force reload if we have valid stored data but aren't in a back navigation
+      if ((storedFilters || storedPage) && !isNavigatingBack()) {
+        // Clear the flags first to prevent reload loops
+        setNavigatingBack(false);
+        
+        // Force a hard reload if needed, but only do this once
+        const needsReload = sessionStorage.getItem('needsReload');
+        if (needsReload !== 'true') {
+          sessionStorage.setItem('needsReload', 'true');
+          window.location.reload();
+        } else {
+          sessionStorage.removeItem('needsReload');
+        }
+      }
+    };
+    
+    // Check if we need to fix navigation
+    handleRestore();
+    
+    // Clean up the navigation flag when component unmounts
+    return () => {
+      if (typeof window !== 'undefined') {
+        // Wait a bit before clearing the flag to ensure it persists during navigation
+        setTimeout(() => {
+          sessionStorage.removeItem('needsReload');
+        }, 500);
+      }
+    };
+  }, []);
+}
+
+/**
  * Hook for managing search state with navigation persistence
  */
 export function useSearchState<T>(key: string, defaultValue: T) {

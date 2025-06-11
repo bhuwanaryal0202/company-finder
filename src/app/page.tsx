@@ -7,7 +7,7 @@ import { Company, SearchFilters } from '@/lib/types'
 import { Download, Building2 } from 'lucide-react'
 import { useCompanies } from '@/lib/queries'
 import Skeleton from '@/components/SkeletonLoading'
-import { useSearchState } from '@/lib/hooks'
+import { useSearchState, useNavigationFix, setNavigatingBack } from '@/lib/hooks'
 
 const ITEMS_PER_PAGE = 12
 
@@ -20,6 +20,9 @@ const defaultFilters: SearchFilters = {
 }
 
 export default function Home() {
+  // Apply navigation fix
+  useNavigationFix();
+  
   // Use our enhanced search state hook for better persistence
   const [currentFilters, setCurrentFilters] = useSearchState<SearchFilters>('companyFinderFilters', defaultFilters);
   const [currentPage, setCurrentPage] = useSearchState<number>('companyFinderPage', 1);
@@ -29,6 +32,8 @@ export default function Home() {
   // Mark as initialized after initial render
   useEffect(() => {
     setInitialized(true);
+    // Clear navigation flag as we're now on the home page
+    setNavigatingBack(false);
   }, []);
 
   // Use React Query to fetch companies

@@ -5,6 +5,7 @@ import { Building2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useCompanyDetails } from '@/lib/queries'
 import { useState, useEffect } from 'react'
+import { setNavigatingBack } from '@/lib/hooks'
 
 export default function CompanyDetailPage() {
   const params = useParams()
@@ -21,11 +22,20 @@ export default function CompanyDetailPage() {
   // Handle back navigation to preserve search state
   const handleBackNavigation = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Set the flag to indicate we're navigating back
+    setNavigatingBack(true);
+    
+    // Try the browser's back button first
     router.back();
     
-    // Additional fallback if router.back() doesn't work as expected
+    // Fallback: if we don't navigate away within 100ms, go to home page
     setTimeout(() => {
-      window.location.href = '/';
+      // Check if we're still on the same page
+      if (window.location.pathname.includes(`/company/${companyId}`)) {
+        // Still on the same page, force navigation to home
+        window.location.href = '/';
+      }
     }, 100);
   };
 
@@ -100,7 +110,7 @@ export default function CompanyDetailPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                {company.register_name || company.business_name || 'Unnamed Company'}
+                {company.business_name || 'Unnamed Company'}
               </h1>
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 {company.state && (
