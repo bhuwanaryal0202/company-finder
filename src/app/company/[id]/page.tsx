@@ -4,10 +4,16 @@ import { useParams } from 'next/navigation'
 import { Building2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useCompanyDetails } from '@/lib/queries'
+import { useState, useEffect } from 'react'
 
 export default function CompanyDetailPage() {
   const params = useParams()
   const companyId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : undefined
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const { data: company, isLoading, error } = useCompanyDetails(companyId)
 
@@ -22,7 +28,7 @@ export default function CompanyDetailPage() {
     }
   }
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="relative">
@@ -62,7 +68,7 @@ export default function CompanyDetailPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" suppressHydrationWarning>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link 
             href="/"
             className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -75,58 +81,74 @@ export default function CompanyDetailPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8" suppressHydrationWarning>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
           {/* Company Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8" suppressHydrationWarning>
-            <div suppressHydrationWarning>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+            <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                {company.register_name}
+                {company.register_name || company.business_name || 'Unnamed Company'}
               </h1>
-              <div className="flex items-center space-x-4 text-sm text-gray-500" suppressHydrationWarning>
-                <span className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-1" />
-                  {company.state}
-                </span>
-                <span className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  Registered {company.registration_date ? new Date(company.registration_date).toLocaleDateString() : 'N/A'}
-                </span>
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                {company.state && (
+                  <span className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    {company.state}
+                  </span>
+                )}
+                {company.registration_date && (
+                  <span className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Registered {new Date(company.registration_date).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="mt-4 sm:mt-0" suppressHydrationWarning>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(company.status)}`}>
-                {company.status}
-              </span>
-            </div>
+            {company.status && (
+              <div className="mt-4 sm:mt-0">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(company.status)}`}>
+                  {company.status}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Company Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" suppressHydrationWarning>
-            <div suppressHydrationWarning>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h2>
-              <dl className="space-y-4" suppressHydrationWarning>
-                <div suppressHydrationWarning>
-                  <dt className="text-sm font-medium text-gray-500">Industry</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{company.industry}</dd>
-                </div>
-                <div suppressHydrationWarning>
-                  <dt className="text-sm font-medium text-gray-500">Registration Number</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{company.registration_number}</dd>
-                </div>
-                <div suppressHydrationWarning>
-                  <dt className="text-sm font-medium text-gray-500">ABN</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{company.abn}</dd>
-                </div>
-                <div suppressHydrationWarning>
-                  <dt className="text-sm font-medium text-gray-500">ACN</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{company.acn}</dd>
-                </div>
-                <div suppressHydrationWarning>
-                  <dt className="text-sm font-medium text-gray-500">Business Name</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{company.business_name}</dd>
-                </div>
+              <dl className="space-y-4">
+                {company.industry && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Industry</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{company.industry}</dd>
+                  </div>
+                )}
+                {company.registration_number && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Registration Number</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{company.registration_number}</dd>
+                  </div>
+                )}
+                {company.abn && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">ABN</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{company.abn}</dd>
+                  </div>
+                )}
+                {company.acn && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">ACN</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{company.acn}</dd>
+                  </div>
+                )}
+                {company.business_name && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Business Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{company.business_name}</dd>
+                  </div>
+                )}
                 {company.cancellation_date && (
-                  <div suppressHydrationWarning>
+                  <div>
                     <dt className="text-sm font-medium text-gray-500">Cancellation Date</dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {new Date(company.cancellation_date).toLocaleDateString()}

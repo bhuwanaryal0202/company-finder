@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, Filter } from 'lucide-react'
 import { Company, SearchFilters, SearchResponse } from '@/lib/types'
 import debounce from 'lodash/debounce'
+import RecentSearches from './RecentSearches'
+import { useRecentSearches } from '@/lib/hooks'
 
 // Constants for filter options
 const industries = [
@@ -57,12 +59,17 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
   })
   
   const [showFilters, setShowFilters] = useState(false)
+  const [showRecentSearches, setShowRecentSearches] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const searchCache = useRef<Map<string, { data: SearchResponse; timestamp: number }>>(new Map())
   const ongoingRequests = useRef<Map<string, Promise<SearchResponse>>>(new Map())
   const lastRequestRef = useRef<string>('')
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
   const initialSearchPerformed = useRef(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  
+  // Get access to recent searches hook
+  const { addSearch } = useRecentSearches(5)
 
   // Debounced search function with increased delay
   const debouncedSearch = useCallback(
@@ -134,6 +141,11 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
         })
         
         onResults(data.companies, data.total, filters)
+        
+        // Add non-empty queries to recent searches
+        if (query.trim()) {
+          addSearch(query.trim())
+        }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           // Ignore abort errors
@@ -144,7 +156,7 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
         onLoading(false)
       }
     }, 1000),
-    [onResults, onLoading]
+    [onResults, onLoading, addSearch]
   )
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
@@ -158,6 +170,22 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
     const newFilters = { ...filters, query: value }
     setFilters(newFilters)
     debouncedSearch(value, newFilters)
+    
+    // Show recent searches when input is focused and empty
+    setShowRecentSearches(value === '')
+  }
+
+  const handleRecentSearchSelect = (query: string) => {
+    setSearchQuery(query)
+    const newFilters = { ...filters, query }
+    setFilters(newFilters)
+    debouncedSearch(query, newFilters)
+    setShowRecentSearches(false)
+    
+    // Focus the search input after selecting a recent search
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
   }
 
   // Initial search on mount
@@ -194,42 +222,70 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
     }
   }, [])
 
+  // Handle input focus
+  const handleInputFocus = () => {
+    setShowRecentSearches(searchQuery === '')
+  }
+  
+  // Handle input blur
+  const handleInputBlur = () => {
+    // Delay hiding recent searches to allow clicking on them
+    setTimeout(() => {
+      setShowRecentSearches(false)
+    }, 200)
+  }
+
   return (
-    <div className="space-y-4" suppressHydrationWarning>
+    <div className="space-y-4">
       {/* Search Input */}
-      <div className="relative" suppressHydrationWarning>
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" suppressHydrationWarning>
-          <Search className="h-5 w-5 text-gray-600" />
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-4 sm:h-5 w-4 sm:w-5 text-gray-600" />
         </div>
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search companies by registered name..."
           value={searchQuery}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          className="w-full pl-10 pr-12 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 text-sm sm:text-base"
+          aria-label="Search companies"
         />
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-900"
+          aria-expanded={showFilters}
+          aria-controls="filter-panel"
+          aria-label={showFilters ? "Hide filters" : "Show filters"}
         >
-          <Filter className="h-5 w-5" />
+          <Filter className="h-4 sm:h-5 w-4 sm:w-5" />
         </button>
       </div>
+      
+      {/* Recent Searches */}
+      {showRecentSearches && (
+        <RecentSearches onSelectSearch={handleRecentSearchSelect} />
+      )}
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 space-y-4" suppressHydrationWarning>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" suppressHydrationWarning>
+        <div 
+          id="filter-panel"
+          className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 sm:p-4 space-y-3 sm:space-y-4" 
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {/* Industry Filter */}
-            <div suppressHydrationWarning>
-              <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label htmlFor="industry" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Industry
               </label>
               <select
                 id="industry"
                 value={filters.industry}
                 onChange={(e) => handleFilterChange('industry', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-xs sm:text-sm"
               >
                 <option value="all">All Industries</option>
                 {industries.map((industry) => (
@@ -241,15 +297,15 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
             </div>
 
             {/* State Filter */}
-            <div suppressHydrationWarning>
-              <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label htmlFor="state" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 State
               </label>
               <select
                 id="state"
                 value={filters.state}
                 onChange={(e) => handleFilterChange('state', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-xs sm:text-sm"
               >
                 <option value="all">All States</option>
                 {states.map((state) => (
@@ -261,15 +317,15 @@ export default function SearchBar({ onResults, onLoading, initialFilters }: Sear
             </div>
 
             {/* Status Filter */}
-            <div suppressHydrationWarning>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label htmlFor="status" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Status
               </label>
               <select
                 id="status"
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-xs sm:text-sm"
               >
                 <option value="all">All Statuses</option>
                 {statuses.map((status) => (

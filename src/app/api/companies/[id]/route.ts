@@ -6,18 +6,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+interface RouteParams {
+  params: Promise<{
+    id: string
+  }>
+}
+
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    // Ensure params.id is available by awaiting it if needed
-    const id = params.id
+    // Await the params object before accessing its properties
+    const resolvedParams = await params
     
-    if (!id) {
+    if (!resolvedParams || !resolvedParams.id) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 })
     }
 
+    const id = resolvedParams.id
+    
     const { data: company, error } = await supabase
       .from('companies')
       .select('*')
@@ -40,4 +48,4 @@ export async function GET(
       { status: 500 }
     )
   }
-} 
+}
