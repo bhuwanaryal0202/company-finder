@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Building2, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useCompanyDetails } from '@/lib/queries'
@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 
 export default function CompanyDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const companyId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : undefined
   const [mounted, setMounted] = useState(false)
   
@@ -16,6 +17,17 @@ export default function CompanyDetailPage() {
   }, [])
   
   const { data: company, isLoading, error } = useCompanyDetails(companyId)
+
+  // Handle back navigation to preserve search state
+  const handleBackNavigation = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.back();
+    
+    // Additional fallback if router.back() doesn't work as expected
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -54,7 +66,8 @@ export default function CompanyDetailPage() {
           <p className="text-gray-500 mb-6">{errorMessage}</p>
           <Link 
             href="/"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={handleBackNavigation}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Search
@@ -71,7 +84,8 @@ export default function CompanyDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link 
             href="/"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            onClick={handleBackNavigation}
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Search

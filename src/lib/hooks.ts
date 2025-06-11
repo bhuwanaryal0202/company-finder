@@ -130,4 +130,52 @@ export function useRecentSearches(maxItems: number = 5) {
     clearSearches,
     removeSearch
   };
+}
+
+/**
+ * Hook for managing search state with navigation persistence
+ */
+export function useSearchState<T>(key: string, defaultValue: T) {
+  const [state, setState] = useLocalStorage<T>(key, defaultValue);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+    
+    // Handle browser back/forward navigation
+    const handlePopState = () => {
+      // Force reload the stored value when navigating back
+      try {
+        const item = localStorage.getItem(key);
+        if (item) {
+          setState(JSON.parse(item));
+        }
+      } catch (error) {
+        console.error(`Error reading ${key} from localStorage during navigation:`, error);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [key, setState]);
+  
+  // Special setter that ensures data is immediately saved to localStorage
+  const setSearchState = (value: T | ((prev: T) => T)) => {
+    setState(value);
+    
+    // For extra safety, also directly update localStorage
+    if (mounted && typeof window !== 'undefined') {
+      try {
+        const valueToStore = value instanceof Function ? value(state) : value;
+        localStorage.setItem(key, JSON.stringify(valueToStore));
+      } catch (error) {
+        console.error(`Error directly storing ${key} to localStorage:`, error);
+      }
+    }
+  };
+  
+  return [state, setSearchState] as const;
 } 

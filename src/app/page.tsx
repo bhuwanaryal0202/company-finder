@@ -7,6 +7,7 @@ import { Company, SearchFilters } from '@/lib/types'
 import { Download, Building2 } from 'lucide-react'
 import { useCompanies } from '@/lib/queries'
 import Skeleton from '@/components/SkeletonLoading'
+import { useSearchState } from '@/lib/hooks'
 
 const ITEMS_PER_PAGE = 12
 
@@ -18,66 +19,24 @@ const defaultFilters: SearchFilters = {
   status: 'all'
 }
 
-// Helper function to safely get localStorage items on the client side only
-const getLocalStorageItem = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') {
-    return defaultValue;
-  }
-  
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) return defaultValue;
-    return JSON.parse(item);
-  } catch (error) {
-    console.error(`Error parsing ${key} from localStorage:`, error);
-    return defaultValue;
-  }
-};
-
 export default function Home() {
-  // Client-side only state initialization
-  const [initialized, setInitialized] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState<SearchFilters>(defaultFilters);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  // Use our enhanced search state hook for better persistence
+  const [currentFilters, setCurrentFilters] = useSearchState<SearchFilters>('companyFinderFilters', defaultFilters);
+  const [currentPage, setCurrentPage] = useSearchState<number>('companyFinderPage', 1);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   
-  // Initialize state from localStorage only on the client side
+  // Mark as initialized after initial render
   useEffect(() => {
-    const filters = getLocalStorageItem('companyFinderFilters', defaultFilters);
-    const page = getLocalStorageItem('companyFinderPage', 1);
-    
-    setCurrentFilters(filters);
-    setCurrentPage(typeof page === 'number' ? page : 1);
     setInitialized(true);
   }, []);
 
-  // Use React Query to fetch companies, but only after client-side initialization
+  // Use React Query to fetch companies
   const { data, isLoading: queryLoading, error } = useCompanies({
     ...currentFilters,
     page: currentPage,
     limit: ITEMS_PER_PAGE
   });
-
-  // Save filters and page to localStorage when they change, but only after initialization
-  useEffect(() => {
-    if (!initialized) return;
-    
-    try {
-      localStorage.setItem('companyFinderFilters', JSON.stringify(currentFilters));
-    } catch (error) {
-      console.error('Error saving filters to localStorage:', error);
-    }
-  }, [currentFilters, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    
-    try {
-      localStorage.setItem('companyFinderPage', currentPage.toString());
-    } catch (error) {
-      console.error('Error saving page to localStorage:', error);
-    }
-  }, [currentPage, initialized]);
 
   // Update loading state for the UI
   useEffect(() => {
